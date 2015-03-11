@@ -20,8 +20,9 @@ module Bookbinder
           expect(h3.attr('id')).to eq('ref-57cff955-33e8-42b3-a485-268e7eb603fb')
         end
 
-        it "transforms ParaBlocks into ps" do
-          expect(html.css('html>body main p').first.text).to match(/Blah blah this is the best lesson\./)
+        it "transforms RichTexts into ps" do
+          expect(html.css('html>body main p').first.text.strip).
+            to eq('Blah blah this is the best lesson.')
         end
 
         it "transforms Hrefs into as" do
@@ -36,8 +37,15 @@ module Bookbinder
           expect(link.attr('href')).to eq('#ref-63da0add-37c7-4c4f-b453-8c00d8cffc45')
         end
 
+        it "transforms Lists into uls with nested ps" do
+          items = html.css('html>body main ul>li>p')
+          expect(items.first.text).to match(/Look.*-- Great stuff on this item/m)
+        end
+
         def debug(html)
-          path = Pathname(File.expand_path('../../../../../tmp/output.html', __FILE__))
+          tmp = Pathname(File.expand_path('../../../../../tmp', __FILE__))
+          tmp.mkpath
+          path = tmp.join('output.html')
           File.write(path, html)
           `open #{path}`
           puts html
@@ -121,7 +129,7 @@ module Bookbinder
                   <Emph>Here</Emph>
                   -- More excellent content
                 </ItemPara>
-                <RichText>Text inside a list</RichText>
+                <RichText>Text inside a list item</RichText>
               </Item>
             </ItemBlock>
           </List>

@@ -46,7 +46,19 @@
     </xsl:element>
   </xsl:template>
 
-  <xsl:template match="/IA/Lessons/Lesson/Topic/ParaBlock">
+  <xsl:template match="/IA/Lessons/Lesson/Topic/ParaBlock/RichText">
+    <p><xsl:apply-templates/></p>
+  </xsl:template>
+
+  <xsl:template match="/IA/Lessons/Lesson/Topic//List">
+    <ul><xsl:apply-templates/></ul>
+  </xsl:template>
+
+  <xsl:template match="/IA/Lessons/Lesson/Topic//List//Item">
+    <li><xsl:apply-templates/></li>
+  </xsl:template>
+
+  <xsl:template match="/IA/Lessons/Lesson/Topic//List//Item/ItemPara">
     <p><xsl:apply-templates/></p>
   </xsl:template>
 
