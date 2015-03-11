@@ -1,12 +1,56 @@
+require 'tmpdir'
 require_relative '../../../../lib/bookbinder/processing/xslt_processor'
 
 module Bookbinder
   module Processing
     describe XsltProcessor do
-      it "runs a template against a given document" do
-        xslt = File.read(File.expand_path('../../../../../lib/bookbinder/processing/xyleme_to_html.xsl', __FILE__))
-        processor = XsltProcessor.new(xslt)
-        xyleme = <<-XYLEME
+      context "when given the Xyleme template" do
+        it "puts the title in both the <title> and <h1>" do
+          expect(html.css('html>head>title').text).to eq('The Document Title')
+          expect(html.css('html>body h1').text).to eq('The Document Title')
+        end
+
+        it "transforms Lesson Titles into h2s" do
+          expect(html.css('html>body main h2').first.text).to eq('First Lesson')
+        end
+
+        it "transforms Topic Titles into h3s with associated ids from Topic" do
+          h3 = html.css('html>body main h3').first
+          expect(h3.text).to eq('Topic 1')
+          expect(h3.attr('id')).to eq('ref-57cff955-33e8-42b3-a485-268e7eb603fb')
+        end
+
+        it "transforms ParaBlocks into ps" do
+          expect(html.css('html>body main p').first.text).to match(/Blah blah this is the best lesson\./)
+        end
+
+        it "transforms Hrefs into as" do
+          link = html.css('html>body main p a')[0]
+          expect(link.text).to eq('google')
+          expect(link.attr('href')).to eq('https://www.google.com/')
+        end
+
+        it "transforms Xrefs into as with internal anchors" do
+          link = html.css('html>body main p a')[1]
+          expect(link.text).to eq('Oh yeah here it is')
+          expect(link.attr('href')).to eq('#ref-63da0add-37c7-4c4f-b453-8c00d8cffc45')
+        end
+
+        def debug(html)
+          path = Pathname(File.expand_path('../../../../../tmp/output.html', __FILE__))
+          File.write(path, html)
+          `open #{path}`
+          puts html
+        end
+
+        let(:html) {
+          processor = XsltProcessor.new(xslt)
+          output = processor.call(xyleme)
+          Nokogiri::HTML(output)
+        }
+
+        let(:xyleme) {
+          <<-XYLEME
 <IA xmlns:xy="http://xyleme.com/xylink" xy:type="IA/Definitions/IADef.xml" xy:guid="6bcab63c-43f7-49a1-bc2b-e7570bca2c9d">
   <CoverPage>
     <Title>The Document Title</Title>
@@ -47,6 +91,10 @@ module Bookbinder
         <ParaBlock xy:guid="3c2589d7-22e8-4716-89d8-69b4074bf214">
           <RichText>
             Blah blah this is the best lesson.
+          </RichText>
+          <RichText>
+            I am about to link externally, look!
+            <Href UrlTarget="https://www.google.com/">google</Href>
           </RichText>
           <RichText>
             I am about to link internally, look!
@@ -99,11 +147,9 @@ module Bookbinder
     </LOM>
   </DesignData>
 </IA>
-        XYLEME
-        output = processor.call(xyleme)
-        html = Nokogiri::HTML(output)
-        puts html
-        expect(html.xpath('html/head/title').text).to eq('The Document Title')
+          XYLEME
+        }
+        let(:xslt) { File.read(File.expand_path('../../../../../lib/bookbinder/processing/xyleme_to_html.xsl', __FILE__)) }
       end
     end
   end
