@@ -69,7 +69,7 @@ module Bookbinder
     end
 
     def stripped_flag_value(v)
-      v.gsub(/['|"]/, "")
+      v.to_s.gsub(/['|"]/, "")
     end
 
     attr_reader :path_to_dita_ot_library

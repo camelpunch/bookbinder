@@ -170,6 +170,8 @@ module Bookbinder
     end
 
     describe "when DITA flags are passed at the command line" do
+      include Redirection
+
       it 'the DITA conversion command includes the same flags' do
         preprocessor = double('preprocessor')
         sheller = double('sheller')
@@ -198,22 +200,28 @@ module Bookbinder
                                                    nil,
                                                    output_locations)
                                )
-        expect(sheller).to receive(:run_command).with("export CLASSPATH=#{expected_classpath}; " +
-                                                      "ant -f path/to/dita/ot/library " +
-                                                      "-Doutput.dir='foo/output/dita/html_from_dita/foo' " +
-                                                      "-Dargs.input='path/to/local/repo/path/to/map.ditamap' " +
-                                                      "-Dargs.filter='' " +
-                                                      "-Dbasedir='/' " +
-                                                      "-Dtranstype='tocjs' " +
-                                                      "-Ddita.temp.dir='/tmp/bookbinder_dita' " +
-                                                      "-Dgenerate.copy.outer='2' " +
-                                                      "-Douter.control='warn' " +
-                                                      "-Dargs.debug='yes' ",
-                                                    anything)
-                                                  .and_return(successful_exit)
-        silence_io_streams do
+
+        ant_command = nil
+        options = nil
+        sheller.define_singleton_method(:run_command) do |cmd, _|
+          ant_command, *options = cmd.split("-D")
+          successful_exit
+        end
+
+        swallow_stdout do
           command.run(['local', '--verbose', "--dita-flags=args.debug='yes'"])
         end
+
+        expect(ant_command).to eq("export CLASSPATH=#{expected_classpath}; ant -f path/to/dita/ot/library ")
+        expect(options.first).to match %r{repositories/book/output/master_middleman/source}
+        expect(options[1..-1]).to eq(["args.input='path/to/local/repo/path/to/map.ditamap' ",
+                                      "args.filter='' ",
+                                      "basedir='/' ",
+                                      "transtype='tocjs' ",
+                                      "dita.temp.dir='/tmp/bookbinder_dita' ",
+                                      "generate.copy.outer='2' ",
+                                      "outer.control='warn' ",
+                                      "args.debug='yes' "])
       end
     end
 

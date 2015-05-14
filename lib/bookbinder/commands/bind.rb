@@ -92,8 +92,7 @@ module Bookbinder
           ('master' if options.include?('--ignore-section-refs'))
         )
 
-        dita_gatherer = dita_section_gatherer_factory.produce(bind_source, output_locations)
-        gathered_dita_sections = dita_gatherer.gather(bind_config.dita_sections)
+        gathered_dita_sections = sections.select(&:requires_preprocessing?)
 
         dita_preprocessor.preprocess(gathered_dita_sections,
                                      output_locations.subnavs_for_layout_dir,
@@ -101,7 +100,7 @@ module Bookbinder
           command = command_creator.convert_to_html_command(
             dita_section,
             dita_flags: dita_flags(options),
-            write_to: dita_section.html_from_dita_section_dir
+            write_to: output_locations.workspace_dir
           )
           status = sheller.run_command(command, output_streams.to_h)
           unless status.success?
@@ -112,7 +111,7 @@ module Bookbinder
           end
         end
 
-        subnavs = (sections + gathered_dita_sections).map(&:subnav).reduce(&:merge)
+        subnavs = sections.map(&:subnav).reduce(&:merge)
 
         success = publish(
           subnavs,

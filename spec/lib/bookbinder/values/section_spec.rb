@@ -15,6 +15,21 @@ module Bookbinder
       end
     end
 
+    it 'requires preprocessing when preprocessor_config is set' do
+      section = Section.new('directory',
+                            'full name',
+                            copied = true,
+                            'path/to/repository',
+                            dir_name = nil,
+                            subnav_template_name = nil,
+                            {'foo' => 'bar'})
+      expect(section.requires_preprocessing?).to be_truthy
+    end
+
+    it 'does not require preprocessing when preprocessor_config is not set' do
+      expect(Section.new.requires_preprocessing?).to be_falsy
+    end
+
     describe '#subnav_template' do
       let(:repo) { Section.new('directory',
                                'full name',
