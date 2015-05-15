@@ -1,4 +1,5 @@
 require_relative '../directory_helpers'
+require_relative '../errors/programmer_mistake'
 
 module Bookbinder
   class OutputLocations
@@ -44,22 +45,6 @@ module Bookbinder
       Pathname(@local_repo_dir) if @local_repo_dir
     end
 
-    def dita_home_dir
-      output_dir.join('dita')
-    end
-
-    def cloned_dita_dir
-      dita_home_dir.join('dita_sections')
-    end
-
-    def html_from_dita_dir
-      dita_home_dir.join('html_from_dita')
-    end
-
-    def formatted_dir
-      dita_home_dir.join('site_generator_ready')
-    end
-
     def site_generator_home
       output_dir.join('master_middleman')
     end
@@ -79,7 +64,11 @@ module Bookbinder
     private
 
     def context_dir
-      Pathname(@context_dir)
+      if @context_dir.nil?
+        raise Errors::ProgrammerMistake.new("You must provide a context_dir to OutputLocations")
+      else
+        Pathname(@context_dir)
+      end
     end
   end
 end

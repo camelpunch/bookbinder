@@ -1,5 +1,3 @@
-require_relative '../bookbinder/values/dita_section'
-
 module Bookbinder
   class DitaCommandCreator
     MissingDitaOTFlagValue = Class.new(RuntimeError)
@@ -24,8 +22,8 @@ module Bookbinder
                 "ant -f #{path_to_dita_ot_library} " +
                 unduplicated_flags(write_to: write_to,
                                    dita_flags: dita_flags,
-                                   ditamap_path: dita_section.absolute_path_to_ditamap,
-                                   ditaval_path: dita_section.absolute_path_to_ditaval)
+                                   ditamap_path: dita_section.path_to_preprocessor_attribute('ditamap_location'),
+                                   ditaval_path: dita_section.path_to_preprocessor_attribute('ditaval_location'))
       command
     end
 

@@ -84,6 +84,9 @@ module Bookbinder
     def has_html_file_for?(topic)
       frag = Nokogiri::HTML.fragment(topic.final_path.read)
       topic.name if frag.css("div.body.conbody").present?
+    rescue Errno::ENOENT => e
+      parent = topic.final_path.join('..')
+      raise "#{e.message}\n\nFiles we did have in #{parent}:\n#{`ls #{parent}`}"
     end
 
     def has_applied_layout?(topic)

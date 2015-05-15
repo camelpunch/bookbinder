@@ -9,7 +9,6 @@ require_relative '../../../../lib/bookbinder/ingest/cloner_factory'
 require_relative '../../../../lib/bookbinder/local_file_system_accessor'
 require_relative '../../../../lib/bookbinder/middleman_runner'
 require_relative '../../../../lib/bookbinder/post_production/sitemap_writer'
-require_relative '../../../../lib/bookbinder/repositories/section_repository'
 require_relative '../../../../lib/bookbinder/server_director'
 require_relative '../../../../lib/bookbinder/sheller'
 require_relative '../../../../lib/bookbinder/spider'
@@ -46,8 +45,6 @@ module Bookbinder
                          partial_args.fetch(:context_dir, File.absolute_path('.')),
                          partial_args.fetch(:dita_preprocessor, dita_preprocessor),
                          partial_args.fetch(:cloner_factory, Ingest::ClonerFactory.new(logger, file_system_accessor, GitFake.new)),
-                         DitaSectionGathererFactory.new(bind_version_control_system, bind_logger),
-                         Repositories::SectionRepository.new(logger),
                          partial_args.fetch(:command_creator, command_creator),
                          partial_args.fetch(:sheller, sheller),
                          partial_args.fetch(:directory_preparer,
@@ -112,10 +109,7 @@ module Bookbinder
                            sheller: Sheller.new,
                            command_creator: double('command creator',
                                                    convert_to_html_command: 'false'))
-        output_locations = OutputLocations.new(context_dir: Pathname('foo'))
-        allow(preprocessor).to receive(:preprocess).and_yield(
-          DitaSection.new(nil, nil, nil, 'foo', nil, nil, output_locations)
-        )
+        allow(preprocessor).to receive(:preprocess).and_yield(Section.new(path_to_repo = nil, 'org/foo'))
         expect { command.run(['local']) }.to raise_exception(Commands::Bind::DitaToHtmlLibraryFailure)
       end
     end
@@ -130,10 +124,7 @@ module Bookbinder
                            sheller: Sheller.new,
                            command_creator: double('command creator',
                                                    convert_to_html_command: stdout_and_stderr_producer))
-        output_locations = OutputLocations.new(context_dir: Pathname('foo'))
-        allow(preprocessor).to receive(:preprocess).and_yield(
-          DitaSection.new(nil, nil, nil, 'foo', nil, nil, output_locations)
-        )
+        allow(preprocessor).to receive(:preprocess).and_yield(Section.new(path_to_repo = nil, 'org/foo'))
         stdout = capture_stdout { swallow_stderr { command.run(['local', '--verbose']) } }
         expect(stdout.lines.first).to eq("foo\n")
       end
@@ -145,10 +136,7 @@ module Bookbinder
                            sheller: Sheller.new,
                            command_creator: double('command creator',
                                                    convert_to_html_command: stdout_and_stderr_producer))
-        output_locations = OutputLocations.new(context_dir: Pathname('foo'))
-        allow(preprocessor).to receive(:preprocess).and_yield(
-          DitaSection.new(nil, nil, nil, 'foo', nil, nil, output_locations)
-        )
+        allow(preprocessor).to receive(:preprocess).and_yield(Section.new(path_to_repo = nil, 'org/foo'))
         stdout = capture_stdout { swallow_stderr { command.run(['local']) } }
         expect(stdout).to eq("")
       end
@@ -160,10 +148,7 @@ module Bookbinder
                            sheller: Sheller.new,
                            command_creator: double('command creator',
                                                    convert_to_html_command: stdout_and_stderr_producer))
-        output_locations = OutputLocations.new(context_dir: Pathname('foo'))
-        allow(preprocessor).to receive(:preprocess).and_yield(
-          DitaSection.new(nil, nil, nil, 'foo', nil, nil, output_locations)
-        )
+        allow(preprocessor).to receive(:preprocess).and_yield(Section.new(path_to_repo = nil, 'org/foo'))
         stderr = capture_stderr { swallow_stdout { command.run(['local']) } }
         expect(stderr).to eq("\e[31mbar\n\e[0m")
       end
@@ -172,13 +157,12 @@ module Bookbinder
     describe "when DITA flags are passed at the command line" do
       include Redirection
 
-      it 'the DITA conversion command includes the same flags' do
+      example 'the DITA conversion command includes the same flags' do
         preprocessor = double('preprocessor')
         sheller = double('sheller')
         command = bind_cmd(dita_preprocessor: preprocessor,
                            sheller: sheller,
                            command_creator: DitaCommandCreator.new('path/to/dita/ot/library'))
-        output_locations = OutputLocations.new(context_dir: Pathname('foo'))
         expected_classpath = 'path/to/dita/ot/library/lib/xercesImpl.jar:' +
                              'path/to/dita/ot/library/lib/xml-apis.jar:' +
                              'path/to/dita/ot/library/lib/resolver.jar:' +
@@ -192,14 +176,12 @@ module Bookbinder
         successful_exit = instance_double(Process::Status, success?: true)
 
         allow(preprocessor).to receive(:preprocess).and_yield(
-                                   DitaSection.new('path/to/local/repo',
-                                                   'path/to/map.ditamap',
-                                                   nil,
-                                                   'foo',
-                                                   nil,
-                                                   nil,
-                                                   output_locations)
-                               )
+          Section.new('path/to/local/repo', 'org/foo',
+                      nil, nil, nil, nil,
+                      {
+                        'ditamap_location' => 'path/to/map.ditamap',
+                        'ditaval_location' => nil,
+                      }))
 
         ant_command = nil
         options = nil
@@ -446,9 +428,7 @@ module Bookbinder
         config_factory = double('config factory', produce: config)
 
         command = bind_cmd(bind_config_factory: config_factory)
-        swallow_stdout do
           command.run(['remote', '--verbose'])
-        end
 
         final_app_dir = File.absolute_path('final_app')
         index_html = File.read(File.join(final_app_dir, 'public', 'my-code-snippet-repo', 'code_snippet_index.html'))

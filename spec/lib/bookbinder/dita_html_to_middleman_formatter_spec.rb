@@ -1,7 +1,7 @@
 require_relative '../../../lib/bookbinder/dita_html_to_middleman_formatter'
-require_relative '../../../lib/bookbinder/local_file_system_accessor'
 require_relative '../../../lib/bookbinder/html_document_manipulator'
-require_relative '../../../lib/bookbinder/values/dita_section'
+require_relative '../../../lib/bookbinder/local_file_system_accessor'
+require_relative '../../../lib/bookbinder/values/section'
 require_relative '../../helpers/use_fixture_repo'
 
 module Bookbinder
@@ -56,14 +56,15 @@ module Bookbinder
         doc_manipulator = double('doc_manipulator')
         dita_formatter = DitaHtmlToMiddlemanFormatter.new(nil, subnav_formatter, doc_manipulator)
 
-        dita_section = DitaSection.new('path/to/local/repo',
-                                       'relative/path/to/ditamap',
-                                       nil,
-                                       'org/my_dita_section',
-                                       nil,
-                                       'my_dita_section')
-
-
+        dita_section = Section.new('path/to/local/repo',
+                                   'org/my_dita_section',
+                                   copied = true,
+                                   dest_dir = 'foo',
+                                   dir_name = 'my_dita_section',
+                                   subnav_templ = nil,
+                                   preprocessor_config = {
+                                     'ditamap_location' => 'relative/path/to/ditamap',
+                                   })
 
         expect(subnav_formatter).to receive(:get_links_as_json).with('unformatted_subnav_text',
                                                                      'my_dita_section').

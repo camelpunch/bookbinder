@@ -12,7 +12,7 @@ module Bookbinder
     def format_html(src, dest)
       all_files_with_ext = file_system_accessor.find_files_with_ext('html', src)
 
-      all_files_with_ext.map do |filepath|
+      all_files_with_ext.each do |filepath|
         file_text = file_system_accessor.read filepath
         file_title_text = html_document_manipulator.read_html_in_tag(document: file_text,
                                                                      tag: 'title')

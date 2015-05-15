@@ -1,10 +1,8 @@
 require 'middleman-syntax'
 
 require_relative '../archive_menu_configuration'
-require_relative '../dita_section_gatherer_factory'
 require_relative '../errors/cli_error'
 require_relative '../streams/switchable_stdout_and_red_stderr'
-require_relative '../values/dita_section'
 require_relative '../values/output_locations'
 require_relative '../values/section'
 require_relative 'naming'
@@ -27,8 +25,6 @@ module Bookbinder
                      context_dir,
                      dita_preprocessor,
                      cloner_factory,
-                     dita_section_gatherer_factory,
-                     section_repository,
                      command_creator,
                      sheller,
                      directory_preparer)
@@ -43,8 +39,6 @@ module Bookbinder
         @context_dir = context_dir
         @dita_preprocessor = dita_preprocessor
         @cloner_factory = cloner_factory
-        @dita_section_gatherer_factory = dita_section_gatherer_factory
-        @section_repository = section_repository
         @command_creator = command_creator
         @sheller = sheller
         @directory_preparer = directory_preparer
@@ -92,15 +86,11 @@ module Bookbinder
           ('master' if options.include?('--ignore-section-refs'))
         )
 
-        gathered_dita_sections = sections.select(&:requires_preprocessing?)
-
-        dita_preprocessor.preprocess(gathered_dita_sections,
-                                     output_locations.subnavs_for_layout_dir,
-                                     output_locations.dita_subnav_template_path) do |dita_section|
+        dita_preprocessor.preprocess(sections, output_locations) do |dita_section|
           command = command_creator.convert_to_html_command(
             dita_section,
             dita_flags: dita_flags(options),
-            write_to: output_locations.workspace_dir
+            write_to: output_locations.workspace_dir.join(dita_section.directory)
           )
           status = sheller.run_command(command, output_streams.to_h)
           unless status.success?
@@ -173,6 +163,7 @@ module Bookbinder
       end
 
       def gather_sections(config, workspace, cloner, ref_override)
+        destination_dir = Dir.mktmpdir
         config.sections.map do |section_config|
           target_ref = ref_override ||
             section_config.fetch('repository', {})['ref'] ||
@@ -183,11 +174,16 @@ module Bookbinder
                                      source_ref: target_ref,
                                      destination_parent_dir: workspace,
                                      destination_dir_name: directory)
-          section_repository.get_instance(
-            section_config,
-            working_copy: working_copy,
-            destination_dir: workspace
-          ) { |*args| Section.new(*args) }
+
+          logger.log "Gathering #{section_config['repository']['name'].cyan}"
+
+          Section.new(working_copy.copied_to,
+                      working_copy.full_name,
+                      working_copy.copied?,
+                      destination_dir,
+                      working_copy.directory,
+                      section_config['subnav_template'],
+                      section_config['preprocessor_config'])
         end
       end
 

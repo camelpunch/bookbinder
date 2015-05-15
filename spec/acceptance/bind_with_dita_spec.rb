@@ -13,7 +13,7 @@ module Bookbinder
         application = Application.new
         dita_book = BookFixture.new('dita-book', SectionSource.local)
 
-        application.bind_book_from_local(dita_book, silent: true) do
+        application.bind_book_from_local(dita_book, silent: false) do
           it_correctly_binds_sections_in(dita_book)
         end
       end

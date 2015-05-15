@@ -1,3 +1,5 @@
+require_relative '../ingest/destination_directory'
+
 module Bookbinder
   Section = Struct.new(:path_to_repository,
                        :full_name,
@@ -19,13 +21,17 @@ module Bookbinder
     end
 
     def directory
-      directory_name
+      Ingest::DestinationDirectory.new(full_name, directory_name)
     end
 
     def subnav
-      namespace = directory.gsub('/', '_')
+      namespace = directory.to_s.gsub('/', '_')
       template = subnav_template || 'default'
       {namespace => template}
+    end
+
+    def path_to_preprocessor_attribute(attr)
+      path_to_repository.join(preprocessor_config[attr]) if preprocessor_config[attr]
     end
   end
 end
